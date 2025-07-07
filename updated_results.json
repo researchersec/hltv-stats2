@@ -1,0 +1,152 @@
+[
+  {
+    "url": "https://hltv.org/matches/2374720/og-vs-amkal-blast-premier-fall-showdown-2024",
+    "match-id": 2374720,
+    "date": "24/8/2024",
+    "event": "BLAST Premier Fall Showdown 2024",
+    "team1": "OG",
+    "team1score": 2,
+    "team1-id": 10503,
+    "team2": "AMKAL",
+    "team2-id": 12586,
+    "team2score": 1,
+    "format": "",
+    "stage": "",
+    "veto": [],
+    "maps": []
+  },
+  {
+    "url": "https://hltv.org/matches/2374718/big-vs-gamerlegion-blast-premier-fall-showdown-2024",
+    "match-id": 2374718,
+    "date": "24/8/2024",
+    "event": "BLAST Premier Fall Showdown 2024",
+    "team1": "BIG",
+    "team1score": 2,
+    "team1-id": 7532,
+    "team2": "GamerLegion",
+    "team2-id": 9928,
+    "team2score": 1,
+    "format": "Best of 3 (Online)",
+    "stage": "",
+    "veto": [],
+    "maps": [
+      {
+        "map": "Mirage",
+        "team1": {
+          "name": "BIG",
+          "score": "6",
+          "status": "lost"
+        },
+        "team2": {
+          "name": "GamerLegion",
+          "score": "13",
+          "status": "won"
+        },
+        "half_scores": "(4:8; 2:5)"
+      },
+      {
+        "map": "Nuke",
+        "team1": {
+          "name": "BIG",
+          "score": "13",
+          "status": "won"
+        },
+        "team2": {
+          "name": "GamerLegion",
+          "score": "7",
+          "status": "lost"
+        },
+        "half_scores": "(5:7; 8:0)"
+      },
+      {
+        "map": "Dust2",
+        "team1": {
+          "name": "BIG",
+          "score": "13",
+          "status": "won"
+        },
+        "team2": {
+          "name": "GamerLegion",
+          "score": "6",
+          "status": "lost"
+        },
+        "half_scores": "(6:6; 7:0)"
+      }
+    ]
+  },
+  {
+    "url": "https://hltv.org/matches/2374719/cloud9-vs-pain-blast-premier-fall-showdown-2024",
+    "match-id": 2374719,
+    "date": "24/8/2024",
+    "event": "BLAST Premier Fall Showdown 2024",
+    "team1": "Cloud9",
+    "team1score": 0,
+    "team1-id": 5752,
+    "team2": "paiN",
+    "team2-id": 4773,
+    "team2score": 2,
+    "format": "Best of 3 (Online)",
+    "stage": "",
+    "veto": [],
+    "maps": [
+      {
+        "map": "Nuke",
+        "team1": {
+          "name": "Cloud9",
+          "score": "8",
+          "status": "lost"
+        },
+        "team2": {
+          "name": "paiN",
+          "score": "13",
+          "status": "won"
+        },
+        "half_scores": "(4:8; 4:5)"
+      },
+      {
+        "map": "Mirage",
+        "team1": {
+          "name": "Cloud9",
+          "score": "9",
+          "status": "lost"
+        },
+        "team2": {
+          "name": "paiN",
+          "score": "13",
+          "status": "won"
+        },
+        "half_scores": "(4:8; 5:5)"
+      },
+      {
+        "map": "Dust2",
+        "team1": {
+          "name": "Cloud9",
+          "score": "-",
+          "status": "lost"
+        },
+        "team2": {
+          "name": "paiN",
+          "score": "-",
+          "status": "lost"
+        },
+        "half_scores": ""
+      }
+    ]
+  },
+  {
+    "url": "https://hltv.org/matches/2374720/og-vs-amkal-blast-premier-fall-showdown-2024",
+    "match-id": 2374720,
+    "date": "24/8/2024",
+    "event": "BLAST Premier Fall Showdown 2024",
+    "team1": "OG",
+    "team1score": 2,
+    "team1-id": 10503,
+    "team2": "AMKAL",
+    "team2-id": 12586,
+    "team2score": 1,
+    "format": "",
+    "stage": "",
+    "veto": [],
+    "maps": []
+  }
+]
