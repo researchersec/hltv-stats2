@@ -112,11 +112,11 @@ def parse_match_details(soup, url):
 
     return match_data
 
-def scrape_urls_from_json(json_file_path):
-    # Read the JSON file
+def update_results_json(json_file_path):
+    # Read the original JSON file
     try:
         with open(json_file_path, 'r') as file:
-            data = json.load(file)
+            results_data = json.load(file)
     except FileNotFoundError:
         logging.error(f"JSON file not found: {json_file_path}")
         return
@@ -124,34 +124,45 @@ def scrape_urls_from_json(json_file_path):
         logging.error(f"Error decoding JSON file: {json_file_path}")
         return
 
-    # Extract unique URLs
-    urls = list(set(match['url'] for match in data))
-    logging.info(f"Found {len(urls)} unique URLs to scrape")
+    # Get unique URLs to avoid redundant scraping
+    unique_urls = list(set(match['url'] for match in results_data))
+    logging.info(f"Found {len(unique_urls)} unique URLs to scrape")
 
-    # Store all match data
-    all_matches = []
+    # Dictionary to store scraped data for each URL
+    scraped_data = {}
 
-    # Process each URL
-    for url in urls:
+    # Scrape data for each unique URL
+    for url in unique_urls:
         soup = get_parsed_page(url)
         if soup:
             match_data = parse_match_details(soup, url)
-            all_matches.append(match_data)
+            scraped_data[url] = match_data
             logging.info(f"Scraped data for {url}: {match_data}")
         else:
             logging.warning(f"Failed to parse page for {url}")
-
+            scraped_data[url] = {"url": url, "format": "", "stage": "", "veto": [], "maps": []}
         time.sleep(1)  # Delay to avoid rate limiting
 
-    # Save results to a JSON file
-    output_file = "match_details.json"
+    # Update each entry in results_data with scraped data
+    for match in results_data:
+        url = match['url']
+        if url in scraped_data:
+            match.update({
+                "format": scraped_data[url]["format"],
+                "stage": scraped_data[url]["stage"],
+                "veto": scraped_data[url]["veto"],
+                "maps": scraped_data[url]["maps"]
+            })
+
+    # Save updated data to a new JSON file
+    output_file = "updated_results.json"
     with open(output_file, 'w') as f:
-        json.dump(all_matches, f, indent=2)
-    logging.info(f"Saved match details to {output_file}")
+        json.dump(results_data, f, indent=2)
+    logging.info(f"Saved updated results to {output_file}")
 
 def main():
     json_file_path = "results.json"  # Path to your JSON file
-    scrape_urls_from_json(json_file_path)
+    update_results_json(json_file_path)
 
 if __name__ == "__main__":
     main()
