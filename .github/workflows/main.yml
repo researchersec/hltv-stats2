@@ -37,3 +37,11 @@ jobs:
       
     - name: Fetch container logs 2
       run: timeout 1m docker logs -f flaresolverr-container || true
+
+    - name: Commit and push demo file
+      run: |
+        git config --local user.email "hojlund123@live.dk"
+        git config --local user.name "researchersec[bot]"
+        git add "*.json"
+        git commit -m "Added updated json file"
+        git push
