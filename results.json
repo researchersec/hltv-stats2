@@ -1,0 +1,50 @@
+[
+    {
+        "url": "https://hltv.org/matches/2374720/og-vs-amkal-blast-premier-fall-showdown-2024",
+        "match-id": 2374720,
+        "date": "24/8/2024",
+        "event": "BLAST Premier Fall Showdown 2024",
+        "team1": "OG",
+        "team1score": 2,
+        "team1-id": 10503,
+        "team2": "AMKAL",
+        "team2-id": 12586,
+        "team2score": 1
+    },
+    {
+        "url": "https://hltv.org/matches/2374718/big-vs-gamerlegion-blast-premier-fall-showdown-2024",
+        "match-id": 2374718,
+        "date": "24/8/2024",
+        "event": "BLAST Premier Fall Showdown 2024",
+        "team1": "BIG",
+        "team1score": 2,
+        "team1-id": 7532,
+        "team2": "GamerLegion",
+        "team2-id": 9928,
+        "team2score": 1
+    },
+    {
+        "url": "https://hltv.org/matches/2374719/cloud9-vs-pain-blast-premier-fall-showdown-2024",
+        "match-id": 2374719,
+        "date": "24/8/2024",
+        "event": "BLAST Premier Fall Showdown 2024",
+        "team1": "Cloud9",
+        "team1score": 0,
+        "team1-id": 5752,
+        "team2": "paiN",
+        "team2-id": 4773,
+        "team2score": 2
+    },
+    {
+        "url": "https://hltv.org/matches/2374720/og-vs-amkal-blast-premier-fall-showdown-2024",
+        "match-id": 2374720,
+        "date": "24/8/2024",
+        "event": "BLAST Premier Fall Showdown 2024",
+        "team1": "OG",
+        "team1score": 2,
+        "team1-id": 10503,
+        "team2": "AMKAL",
+        "team2-id": 12586,
+        "team2score": 1
+    }
+]
