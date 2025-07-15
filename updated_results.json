@@ -10,10 +10,53 @@
     "team2": "AMKAL",
     "team2-id": 12586,
     "team2score": 1,
-    "format": "",
+    "format": "Best of 3 (Online)",
     "stage": "",
     "veto": [],
-    "maps": []
+    "maps": [
+      {
+        "map": "Dust2",
+        "team1": {
+          "name": "OG",
+          "score": "17",
+          "status": "lost"
+        },
+        "team2": {
+          "name": "AMKAL",
+          "score": "19",
+          "status": "won"
+        },
+        "half_scores": "(5:7; 7:5) (5:7)"
+      },
+      {
+        "map": "Vertigo",
+        "team1": {
+          "name": "OG",
+          "score": "13",
+          "status": "won"
+        },
+        "team2": {
+          "name": "AMKAL",
+          "score": "0",
+          "status": "lost"
+        },
+        "half_scores": "(12:0; 1:0)"
+      },
+      {
+        "map": "Inferno",
+        "team1": {
+          "name": "OG",
+          "score": "13",
+          "status": "won"
+        },
+        "team2": {
+          "name": "AMKAL",
+          "score": "6",
+          "status": "lost"
+        },
+        "half_scores": "(9:3; 4:3)"
+      }
+    ]
   },
   {
     "url": "https://hltv.org/matches/2374718/big-vs-gamerlegion-blast-premier-fall-showdown-2024",
@@ -144,9 +187,52 @@
     "team2": "AMKAL",
     "team2-id": 12586,
     "team2score": 1,
-    "format": "",
+    "format": "Best of 3 (Online)",
     "stage": "",
     "veto": [],
-    "maps": []
+    "maps": [
+      {
+        "map": "Dust2",
+        "team1": {
+          "name": "OG",
+          "score": "17",
+          "status": "lost"
+        },
+        "team2": {
+          "name": "AMKAL",
+          "score": "19",
+          "status": "won"
+        },
+        "half_scores": "(5:7; 7:5) (5:7)"
+      },
+      {
+        "map": "Vertigo",
+        "team1": {
+          "name": "OG",
+          "score": "13",
+          "status": "won"
+        },
+        "team2": {
+          "name": "AMKAL",
+          "score": "0",
+          "status": "lost"
+        },
+        "half_scores": "(12:0; 1:0)"
+      },
+      {
+        "map": "Inferno",
+        "team1": {
+          "name": "OG",
+          "score": "13",
+          "status": "won"
+        },
+        "team2": {
+          "name": "AMKAL",
+          "score": "6",
+          "status": "lost"
+        },
+        "half_scores": "(9:3; 4:3)"
+      }
+    ]
   }
 ]
