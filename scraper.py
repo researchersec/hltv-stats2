@@ -54,23 +54,51 @@ def parse_match_details(soup, url):
         logging.warning(f"No maps section found for {url}")
         return match_data
 
+    # Log the maps section for debugging
+    logging.debug(f"Maps section HTML for {url}: {maps_section.prettify()[:1000]}...")
+
     # Extract match format and stage
-    format_div = maps_section.find("div", class_="standard-box veto-box")
-    if format_div:
-        format_text = format_div.find("div", class_="padding preformatted-text")
+    format_boxes = maps_section.find_all("div", class_="standard-box veto-box")
+    logging.debug(f"Found {len(format_boxes)} veto-box elements for {url}")
+    for box in format_boxes:
+        format_text = box.find("div", class_="padding preformatted-text")
         if format_text:
-            lines = format_text.text.strip().split("\n")
-            match_data["format"] = lines[0].strip() if lines else ""
-            match_data["stage"] = lines[1].strip().lstrip("* ") if len(lines) > 1 else ""
+            lines = [line.strip() for line in format_text.text.split("\n") if line.strip()]
+            match_data["format"] = lines[0] if lines else ""
+            if len(lines) > 1:
+                stage_text = lines[1].lstrip("* ").strip()
+                match_data["stage"] = stage_text if stage_text else ""
+                logging.debug(f"Extracted format: {match_data['format']}, stage: {match_data['stage']} for {url}")
 
     # Extract veto process
-    veto_div = maps_section.find("div", class_="padding")
-    if veto_div:
-        veto_steps = veto_div.find_all("div")
-        match_data["veto"] = [step.text.strip() for step in veto_steps]
+    veto_found = False
+    for box in format_boxes:
+        veto_div = box.find("div", class_="padding")
+        if veto_div:
+            veto_text = veto_div.text.lower()
+            # Check if this is the veto section (contains "removed", "picked", or "was left over")
+            if any(keyword in veto_text for keyword in ["removed", "picked", "was left over"]):
+                veto_steps = veto_div.find_all("div")
+                match_data["veto"] = [step.text.strip() for step in veto_steps if step.text.strip()]
+                veto_found = True
+                logging.debug(f"Extracted veto steps for {url}: {match_data['veto']}")
+                break
+            else:
+                logging.debug(f"Skipped non-veto div with class='padding' for {url}: {veto_text[:100]}...")
+
+    # Fallback: Search for veto steps in the entire maps_section
+    if not veto_found:
+        logging.debug(f"Attempting fallback veto extraction for {url}")
+        veto_steps = maps_section.find_all("div", string=re.compile(r"\d+\.\s*(?:removed|picked|was left over)", re.I))
+        if veto_steps:
+            match_data["veto"] = [step.text.strip() for step in veto_steps if step.text.strip()]
+            logging.debug(f"Fallback veto steps extracted for {url}: {match_data['veto']}")
+        else:
+            logging.warning(f"No veto steps found for {url}")
 
     # Extract map results
     map_holders = maps_section.find_all("div", class_="mapholder")
+    logging.debug(f"Found {len(map_holders)} map holders for {url}")
     for map_holder in map_holders:
         map_data = {}
         # Map name
