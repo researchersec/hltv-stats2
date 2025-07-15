@@ -11,8 +11,16 @@
     "team2-id": 12586,
     "team2score": 1,
     "format": "Best of 3 (Online)",
-    "stage": "",
-    "veto": [],
+    "stage": "Quarter-final",
+    "veto": [
+      "1. OG removed Mirage",
+      "2. AMKAL removed Anubis",
+      "3. OG picked Dust2",
+      "4. AMKAL picked Vertigo",
+      "5. OG removed Nuke",
+      "6. AMKAL removed Ancient",
+      "7. Inferno was left over"
+    ],
     "maps": [
       {
         "map": "Dust2",
@@ -70,8 +78,16 @@
     "team2-id": 9928,
     "team2score": 1,
     "format": "Best of 3 (Online)",
-    "stage": "",
-    "veto": [],
+    "stage": "Round of 16",
+    "veto": [
+      "1. GamerLegion removed Ancient",
+      "2. BIG removed Anubis",
+      "3. GamerLegion picked Mirage",
+      "4. BIG picked Nuke",
+      "5. GamerLegion removed Vertigo",
+      "6. BIG removed Inferno",
+      "7. Dust2 was left over"
+    ],
     "maps": [
       {
         "map": "Mirage",
@@ -129,8 +145,16 @@
     "team2-id": 4773,
     "team2score": 2,
     "format": "Best of 3 (Online)",
-    "stage": "",
-    "veto": [],
+    "stage": "Round of 16",
+    "veto": [
+      "1. paiN removed Ancient",
+      "2. Cloud9 removed Vertigo",
+      "3. paiN picked Nuke",
+      "4. Cloud9 picked Mirage",
+      "5. paiN removed Inferno",
+      "6. Cloud9 removed Anubis",
+      "7. Dust2 was left over"
+    ],
     "maps": [
       {
         "map": "Nuke",
@@ -188,8 +212,16 @@
     "team2-id": 12586,
     "team2score": 1,
     "format": "Best of 3 (Online)",
-    "stage": "",
-    "veto": [],
+    "stage": "Quarter-final",
+    "veto": [
+      "1. OG removed Mirage",
+      "2. AMKAL removed Anubis",
+      "3. OG picked Dust2",
+      "4. AMKAL picked Vertigo",
+      "5. OG removed Nuke",
+      "6. AMKAL removed Ancient",
+      "7. Inferno was left over"
+    ],
     "maps": [
       {
         "map": "Dust2",
