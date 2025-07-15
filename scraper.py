@@ -76,7 +76,6 @@ def parse_match_details(soup, url):
         veto_div = box.find("div", class_="padding")
         if veto_div:
             veto_text = veto_div.text.lower()
-            # Check if this is the veto section (contains "removed", "picked", or "was left over")
             if any(keyword in veto_text for keyword in ["removed", "picked", "was left over"]):
                 veto_steps = veto_div.find_all("div")
                 match_data["veto"] = [step.text.strip() for step in veto_steps if step.text.strip()]
@@ -86,7 +85,6 @@ def parse_match_details(soup, url):
             else:
                 logging.debug(f"Skipped non-veto div with class='padding' for {url}: {veto_text[:100]}...")
 
-    # Fallback: Search for veto steps in the entire maps_section
     if not veto_found:
         logging.debug(f"Attempting fallback veto extraction for {url}")
         veto_steps = maps_section.find_all("div", string=re.compile(r"\d+\.\s*(?:removed|picked|was left over)", re.I))
@@ -123,7 +121,13 @@ def parse_match_details(soup, url):
             # Half-time scores
             half_scores = results.find("div", class_="results-center-half-score")
             half_score_text = half_scores.text.strip() if half_scores else ""
-            
+
+            # Check if the map was not played
+            if team1_score == "-" and team2_score == "-" and not half_score_text:
+                team1_status = "not_played"
+                team2_status = "not_played"
+                logging.debug(f"Detected unplayed map {map_data['map']} for {url}")
+
             map_data["team1"] = {
                 "name": team1_name,
                 "score": team1_score,
@@ -136,7 +140,20 @@ def parse_match_details(soup, url):
             }
             map_data["half_scores"] = half_score_text
 
-        match_data["maps"].append(map_data)
+            # Option 2: Skip unplayed maps (uncomment to use instead)
+            # if team1_status == "not_played" and team2_status == "not_played":
+            #     logging.debug(f"Skipping unplayed map {map_data['map']} for {url}")
+            #     continue
+
+            map_data["status"] = "played" if half_score_text else "not_played"
+            map_data["map"] = map_data["map"]
+            map_data["team1"] = map_data["team1"]
+            map_data["team2"] = map_data["team2"]
+            map_data["half_scores"] = map_data["half_scores"]
+            match_data["maps"].append(map_data)
+            
+        else:
+            logging.debug(f"No results found for map {map_data['map']} in {url}")
 
     return match_data
 
