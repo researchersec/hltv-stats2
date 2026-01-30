@@ -125,7 +125,7 @@ def parse_match_odds(html, match_url):
 
 def main():
     # Replace with your target match URL
-    match_url = "https://www.hltv.org/matches/2389628/astralis-vs-nrg-iem-krakw-2026-stage-1"
+    match_url = "https://www.hltv.org/matches/2389684/mibr-vs-9z-fire-conter-season-1"
 
     logging.info(f"Fetching: {match_url}")
     html = get_html(match_url)
