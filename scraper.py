@@ -27,7 +27,6 @@ def get_html(url):
                 "cmd": "request.get",
                 "url": url,
                 "maxTimeout": 65000,
-                "cookies": [],  # ← you can add consent cookies here later
             }
             resp = requests.post(FLARE_SOLVER_URL, json=payload, timeout=100)
             resp.raise_for_status()
@@ -57,120 +56,67 @@ def parse_matches(html):
     soup = BeautifulSoup(html, "lxml")
     matches = []
 
-    # Try to find match containers
-    match_containers = soup.find_all("div", class_="b-match-container")
-    if not match_containers:
-        logging.warning("No 'b-match-container' found – trying fallback selectors")
-        match_containers = soup.find_all(["div"], class_=re.compile(r"match|upcoming"))
+    # Match blocks are div.bc-analytics-insights-middle
+    match_blocks = soup.find_all("div", class_="bc-analytics-insights-middle")
+    logging.info(f"Found {len(match_blocks)} potential match blocks")
 
-    for container in match_containers:
-        table = container.find("table", class_="bookmakerMatch")
-        if not table:
+    for block in match_blocks:
+        # Extract teams from cell1
+        team_rows = block.find_all("div", class_="bc-analytics-insights-team-row")
+        if len(team_rows) < 2:
+            logging.warning("Missing teams in block")
             continue
+        team1 = team_rows[0].find("div", class_="bc-analytics-insights-team-name").get_text(strip=True)
+        team2 = team_rows[1].find("div", class_="bc-analytics-insights-team-name").get_text(strip=True)
 
-        # Extract teams
-        team_divs = table.find_all("div", class_="team-name")
-        if len(team_divs) >= 2:
-            team1 = team_divs[0].get_text(strip=True)
-            team2 = team_divs[1].get_text(strip=True)
-        else:
-            team_spans = table.find_all(["span", "div"], class_=re.compile(r"team|text-ellipsis"))
-            if len(team_spans) >= 2:
-                team1 = team_spans[0].get_text(strip=True)
-                team2 = team_spans[1].get_text(strip=True)
-            else:
-                logging.warning("Could not find team names")
-                continue
+        # Extract odds from cell2 (best odds)
+        odds_divs = block.find_all("div", class_="bc-analytics-best-o")
+        if len(odds_divs) < 2:
+            logging.warning("Missing odds in block")
+            continue
+        odd1 = odds_divs[0].get_text(strip=True)
+        odd2 = odds_divs[1].get_text(strip=True)
 
-        # Match link
-        link_tag = table.find("a", class_="a-reset")
-        match_href = link_tag["href"] if link_tag else None
-        full_url = f"https://www.hltv.org{match_href}" if match_href and match_href.startswith("/") else match_href
+        # Construct odds dict (best provider)
+        odds = {
+            "best": {
+                "team1": odd1 if odd1 != '-' else "N/A",
+                "team2": odd2 if odd2 != '-' else "N/A"
+            }
+        }
 
-        # === Collect odds ===
-        odds = {}  # { "marathon": {"team1": "1.54", "team2": "2.31"}, ... }
+        # Extract match ID and slug from form links in cell3
+        form_link = block.find("a", class_="bc-analytics-form-link")
+        full_url = None
+        analytics_url = None
+        if form_link and 'href' in form_link.attrs:
+            href = form_link["href"]
+            match = re.search(r"/matches/(\d+)/(.+)", href)
+            if match:
+                match_id = match.group(1)
+                slug = match.group(2)
+                full_url = f"https://www.hltv.org{match_link['href']}"
+                analytics_url = f"https://www.hltv.org/betting/analytics/{match_id}/{slug}"
 
-        provider_cells = table.find_all("td", class_=lambda v: v and any("odds-provider" in c for c in v.split()))
-
-        logging.debug(f"Found {len(provider_cells)} provider cells for {team1} vs {team2}")
-
-        cell_index = 0
-        for cell in provider_cells:
-            classes = cell.get("class", [])
-            provider_cls = next((c for c in classes if "odds-provider" in c), None)
-            if not provider_cls:
-                continue
-
-            provider = re.sub(r"^(b-list-)?odds-provider-", "", provider_cls).lower().strip()
-
-            # Try to determine side (team1 / team2)
-            side = None
-            row = cell.find_parent("tr")
-            if row:
-                # Look for team indicators in the row
-                team1_indicators = row.find_all(["td", "th"], class_=re.compile(r"team1|left|first"))
-                if cell in team1_indicators or cell_index % 2 == 0:
-                    side = "team1"
-                else:
-                    side = "team2"
-            # Fallback: alternate based on order (most tables are team1 then team2)
-            if not side:
-                side = "team1" if cell_index % 2 == 0 else "team2"
-
-            # Extract odd value
-            value = None
-            candidates = [
-                cell.find("a", class_="odds"),
-                cell.find("a", class_="bestOdds"),
-                cell.find("span"),
-                cell
-            ]
-            for cand in candidates:
-                if cand:
-                    txt = cand.get_text(strip=True)
-                    if txt and re.match(r"^\d+\.?\d{1,2}$", txt):
-                        value = txt
-                        break
-
-            if value:
-                if provider not in odds:
-                    odds[provider] = {}
-                odds[provider][side] = value
-                logging.debug(f"  → {provider} {side:<6} = {value}")
-
-            cell_index += 1
-
-        # Fallback if provider cells didn't work well
-        if not odds or all(len(v) < 2 for v in odds.values()):
-            odds_links = table.find_all("a", class_="odds")
-            logging.debug(f"Fallback: found {len(odds_links)} <a class='odds'> elements")
-            for i, link in enumerate(odds_links):
-                txt = link.get_text(strip=True)
-                if txt and re.match(r"^\d+\.?\d{1,2}$", txt):
-                    side = "team1" if i % 2 == 0 else "team2"
-                    provider_fallback = f"odds_link_{i//2}"
-                    if provider_fallback not in odds:
-                        odds[provider_fallback] = {}
-                    odds[provider_fallback][side] = txt
-
-        # Save only if we have at least one provider with odds
-        if odds:
+        # Save entry if odds are present
+        if odds["best"]["team1"] != "N/A" or odds["best"]["team2"] != "N/A":
             entry = {
                 "team1": team1,
                 "team2": team2,
                 "odds": odds,
                 "match_url": full_url,
-                "analytics_url": full_url,
+                "analytics_url": analytics_url,
             }
             matches.append(entry)
+            logging.debug(f"Extracted match: {team1} vs {team2} with odds {odds}")
 
     return matches
 
 
 def main():
-    url = "https://www.hltv.org/betting/money"
+    url = "https://www.hltv.org/betting/analytics"
 
-    logging.info("Fetching HLTV betting odds page...")
+    logging.info("Fetching HLTV betting analytics page...")
     html = get_html(url)
 
     if not html:
@@ -182,7 +128,7 @@ def main():
 
     logging.info(f"Extracted {len(results)} matches with odds")
 
-    with open("hltv_odds.json", "w", encoding="utf-8") as f:
+    with open("hltv_analytics_odds.json", "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
     # Print preview
@@ -192,7 +138,7 @@ def main():
             t1 = sides.get("team1", "—")
             t2 = sides.get("team2", "—")
             print(f"  {prov:18}  team1: {t1:>5}   team2: {t2:>5}")
-        print(f"  → {match.get('match_url')}")
+        print(f"  → {match.get('analytics_url')}")
         print("─" * 70)
 
 
