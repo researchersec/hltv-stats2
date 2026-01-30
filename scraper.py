@@ -95,8 +95,11 @@ def parse_match_odds(html, match_url):
         # Odds cells
         odds_cells = row.find_all("td", class_="odds-cell")
         if len(odds_cells) < 2:
+            logging.debug(f"Odds cells found: {len(odds_cells)} | HTML: {str(row.find_all('td', class_='odds-cell'))[:200]}")
             logging.debug(f"Skipping {provider_name}: not enough odds cells")
             continue
+
+        logging.debug(f"Odds cells found: {len(odds_cells)} | HTML: {str(row.find_all('td', class_='odds-cell'))[:200]}")
 
         odd1_a = odds_cells[0].find("a")
         odd2_a = odds_cells[1].find("a")
