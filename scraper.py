@@ -1,214 +1,200 @@
-import os
+import requests
+from bs4 import BeautifulSoup
 import json
-import time
 import logging
 import re
-from bs4 import BeautifulSoup
-import requests
-import zoneinfo
-import tzlocal
 
-# Logging configuration
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-HLTV_COOKIE_TIMEZONE = "Europe/Copenhagen"
-HLTV_ZONEINFO = zoneinfo.ZoneInfo(HLTV_COOKIE_TIMEZONE)
-LOCAL_TIMEZONE_NAME = tzlocal.get_localzone_name()
-LOCAL_ZONEINFO = zoneinfo.ZoneInfo(LOCAL_TIMEZONE_NAME)
-FLARE_SOLVERR_URL = "http://localhost:8191/v1"
+FLARE_SOLVER_URL = "http://localhost:8191/v1"
+USE_FLARE = True
 
-TEAM_MAP_FOR_RESULTS = []
 
-def get_parsed_page(url):
-    logging.info(f"Fetching page: {url}")
+def get_html(url):
     headers = {
-        "referer": "https://www.hltv.org/stats",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Referer": "https://www.hltv.org/",
+        "Accept-Language": "en-US,en;q=0.9",
     }
-    cookies = {"hltvTimeZone": HLTV_COOKIE_TIMEZONE}
-    post_body = {"cmd": "request.get", "url": url, "maxTimeout": 60000}
 
-    try:
-        response = requests.post(FLARE_SOLVERR_URL, headers=headers, json=post_body)
-        response.raise_for_status()
-        json_response = response.json()
-        if json_response.get("status") == "ok":
-            html = json_response["solution"]["response"]
-            logging.info(f"Successfully fetched page: {url}")
-            return BeautifulSoup(html, "lxml")
-        else:
-            logging.error(f"Failed to fetch page: {url}, status: {json_response.get('status')}")
-    except requests.RequestException as e:
-        logging.error(f"Error making HTTP request for {url}: {e}")
-    return None
-
-def parse_match_details(soup, url):
-    match_data = {"url": url, "format": "", "stage": "", "veto": [], "maps": []}
-
-    # Find the relevant section
-    maps_section = soup.find("div", class_="col-6 col-7-small")
-    if not maps_section:
-        logging.warning(f"No maps section found for {url}")
-        return match_data
-
-    # Log the maps section for debugging
-    logging.debug(f"Maps section HTML for {url}: {maps_section.prettify()[:1000]}...")
-
-    # Extract match format and stage
-    format_boxes = maps_section.find_all("div", class_="standard-box veto-box")
-    logging.debug(f"Found {len(format_boxes)} veto-box elements for {url}")
-    for box in format_boxes:
-        format_text = box.find("div", class_="padding preformatted-text")
-        if format_text:
-            lines = [line.strip() for line in format_text.text.split("\n") if line.strip()]
-            match_data["format"] = lines[0] if lines else ""
-            if len(lines) > 1:
-                stage_text = lines[1].lstrip("* ").strip()
-                match_data["stage"] = stage_text if stage_text else ""
-                logging.debug(f"Extracted format: {match_data['format']}, stage: {match_data['stage']} for {url}")
-
-    # Extract veto process
-    veto_found = False
-    for box in format_boxes:
-        veto_div = box.find("div", class_="padding")
-        if veto_div:
-            veto_text = veto_div.text.lower()
-            if any(keyword in veto_text for keyword in ["removed", "picked", "was left over"]):
-                veto_steps = veto_div.find_all("div")
-                match_data["veto"] = [step.text.strip() for step in veto_steps if step.text.strip()]
-                veto_found = True
-                logging.debug(f"Extracted veto steps for {url}: {match_data['veto']}")
-                break
+    if USE_FLARE:
+        try:
+            payload = {
+                "cmd": "request.get",
+                "url": url,
+                "maxTimeout": 65000,
+                "cookies": [],  # ← you can add consent cookies here later
+            }
+            resp = requests.post(FLARE_SOLVER_URL, json=payload, timeout=100)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("status") == "ok":
+                return data["solution"]["response"]
             else:
-                logging.debug(f"Skipped non-veto div with class='padding' for {url}: {veto_text[:100]}...")
+                logging.error("FlareSolverr error: %s", data.get("message"))
+                return None
+        except Exception as e:
+            logging.error("FlareSolverr failed: %s", e)
+            return None
+    else:
+        try:
+            r = requests.get(url, headers=headers, timeout=25)
+            r.raise_for_status()
+            return r.text
+        except Exception as e:
+            logging.error("Direct request failed: %s", e)
+            return None
 
-    if not veto_found:
-        logging.debug(f"Attempting fallback veto extraction for {url}")
-        veto_steps = maps_section.find_all("div", string=re.compile(r"\d+\.\s*(?:removed|picked|was left over)", re.I))
-        if veto_steps:
-            match_data["veto"] = [step.text.strip() for step in veto_steps if step.text.strip()]
-            logging.debug(f"Fallback veto steps extracted for {url}: {match_data['veto']}")
+
+def parse_matches(html):
+    if not html:
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    matches = []
+
+    # Try to find match containers
+    match_containers = soup.find_all("div", class_="b-match-container")
+    if not match_containers:
+        logging.warning("No 'b-match-container' found – trying fallback selectors")
+        match_containers = soup.find_all(["div"], class_=re.compile(r"match|upcoming"))
+
+    for container in match_containers:
+        table = container.find("table", class_="bookmakerMatch")
+        if not table:
+            continue
+
+        # Extract teams
+        team_divs = table.find_all("div", class_="team-name")
+        if len(team_divs) >= 2:
+            team1 = team_divs[0].get_text(strip=True)
+            team2 = team_divs[1].get_text(strip=True)
         else:
-            logging.warning(f"No veto steps found for {url}")
+            team_spans = table.find_all(["span", "div"], class_=re.compile(r"team|text-ellipsis"))
+            if len(team_spans) >= 2:
+                team1 = team_spans[0].get_text(strip=True)
+                team2 = team_spans[1].get_text(strip=True)
+            else:
+                logging.warning("Could not find team names")
+                continue
 
-    # Extract map results
-    map_holders = maps_section.find_all("div", class_="mapholder")
-    logging.debug(f"Found {len(map_holders)} map holders for {url}")
-    for map_holder in map_holders:
-        map_data = {}
-        # Map name
-        map_name_div = map_holder.find("div", class_="mapname")
-        map_data["map"] = map_name_div.text.strip() if map_name_div else "Unknown"
+        # Match link
+        link_tag = table.find("a", class_="a-reset")
+        match_href = link_tag["href"] if link_tag else None
+        full_url = f"https://www.hltv.org{match_href}" if match_href and match_href.startswith("/") else match_href
 
-        # Team results
-        results = map_holder.find("div", class_="results")
-        if results:
-            # Team 1 (left)
-            team1 = results.find("div", class_="results-left")
-            team1_name = team1.find("div", class_="results-teamname").text.strip() if team1 else ""
-            team1_score = team1.find("div", class_="results-team-score").text.strip() if team1 else ""
-            team1_status = "won" if "won" in team1.get("class", []) else "lost"
+        # === Collect odds ===
+        odds = {}  # { "marathon": {"team1": "1.54", "team2": "2.31"}, ... }
 
-            # Team 2 (right)
-            team2 = results.find("span", class_="results-right")
-            team2_name = team2.find("div", class_="results-teamname").text.strip() if team2 else ""
-            team2_score = team2.find("div", class_="results-team-score").text.strip() if team2 else ""
-            team2_status = "won" if "won" in team2.get("class", []) else "lost"
+        provider_cells = table.find_all("td", class_=lambda v: v and any("odds-provider" in c for c in v.split()))
 
-            # Half-time scores
-            half_scores = results.find("div", class_="results-center-half-score")
-            half_score_text = half_scores.text.strip() if half_scores else ""
+        logging.debug(f"Found {len(provider_cells)} provider cells for {team1} vs {team2}")
 
-            # Check if the map was not played
-            if team1_score == "-" and team2_score == "-" and not half_score_text:
-                team1_status = "not_played"
-                team2_status = "not_played"
-                logging.debug(f"Detected unplayed map {map_data['map']} for {url}")
+        cell_index = 0
+        for cell in provider_cells:
+            classes = cell.get("class", [])
+            provider_cls = next((c for c in classes if "odds-provider" in c), None)
+            if not provider_cls:
+                continue
 
-            map_data["team1"] = {
-                "name": team1_name,
-                "score": team1_score,
-                "status": team1_status
+            provider = re.sub(r"^(b-list-)?odds-provider-", "", provider_cls).lower().strip()
+
+            # Try to determine side (team1 / team2)
+            side = None
+            row = cell.find_parent("tr")
+            if row:
+                # Look for team indicators in the row
+                team1_indicators = row.find_all(["td", "th"], class_=re.compile(r"team1|left|first"))
+                if cell in team1_indicators or cell_index % 2 == 0:
+                    side = "team1"
+                else:
+                    side = "team2"
+            # Fallback: alternate based on order (most tables are team1 then team2)
+            if not side:
+                side = "team1" if cell_index % 2 == 0 else "team2"
+
+            # Extract odd value
+            value = None
+            candidates = [
+                cell.find("a", class_="odds"),
+                cell.find("a", class_="bestOdds"),
+                cell.find("span"),
+                cell
+            ]
+            for cand in candidates:
+                if cand:
+                    txt = cand.get_text(strip=True)
+                    if txt and re.match(r"^\d+\.?\d{1,2}$", txt):
+                        value = txt
+                        break
+
+            if value:
+                if provider not in odds:
+                    odds[provider] = {}
+                odds[provider][side] = value
+                logging.debug(f"  → {provider} {side:<6} = {value}")
+
+            cell_index += 1
+
+        # Fallback if provider cells didn't work well
+        if not odds or all(len(v) < 2 for v in odds.values()):
+            odds_links = table.find_all("a", class_="odds")
+            logging.debug(f"Fallback: found {len(odds_links)} <a class='odds'> elements")
+            for i, link in enumerate(odds_links):
+                txt = link.get_text(strip=True)
+                if txt and re.match(r"^\d+\.?\d{1,2}$", txt):
+                    side = "team1" if i % 2 == 0 else "team2"
+                    provider_fallback = f"odds_link_{i//2}"
+                    if provider_fallback not in odds:
+                        odds[provider_fallback] = {}
+                    odds[provider_fallback][side] = txt
+
+        # Save only if we have at least one provider with odds
+        if odds:
+            entry = {
+                "team1": team1,
+                "team2": team2,
+                "odds": odds,
+                "match_url": full_url,
+                "analytics_url": full_url,
             }
-            map_data["team2"] = {
-                "name": team2_name,
-                "score": team2_score,
-                "status": team2_status
-            }
-            map_data["half_scores"] = half_score_text
+            matches.append(entry)
 
-            # Option 2: Skip unplayed maps (uncomment to use instead)
-            # if team1_status == "not_played" and team2_status == "not_played":
-            #     logging.debug(f"Skipping unplayed map {map_data['map']} for {url}")
-            #     continue
+    return matches
 
-            map_data["status"] = "played" if half_score_text else "not_played"
-            map_data["map"] = map_data["map"]
-            map_data["team1"] = map_data["team1"]
-            map_data["team2"] = map_data["team2"]
-            map_data["half_scores"] = map_data["half_scores"]
-            match_data["maps"].append(map_data)
-            
-        else:
-            logging.debug(f"No results found for map {map_data['map']} in {url}")
-
-    return match_data
-
-def update_results_json(json_file_path):
-    # Read the original JSON file
-    try:
-        with open(json_file_path, 'r') as file:
-            results_data = json.load(file)
-    except FileNotFoundError:
-        logging.error(f"JSON file not found: {json_file_path}")
-        return
-    except json.JSONDecodeError:
-        logging.error(f"Error decoding JSON file: {json_file_path}")
-        return
-
-    # Get unique URLs to avoid redundant scraping
-    unique_urls = list(set(match['url'] for match in results_data))
-    logging.info(f"Found {len(unique_urls)} unique URLs to scrape")
-
-    # Dictionary to store scraped data for each URL
-    scraped_data = {}
-
-    # Scrape data for each unique URL
-    for url in unique_urls:
-        soup = get_parsed_page(url)
-        if soup:
-            match_data = parse_match_details(soup, url)
-            scraped_data[url] = match_data
-            logging.info(f"Scraped data for {url}: {match_data}")
-        else:
-            logging.warning(f"Failed to parse page for {url}")
-            scraped_data[url] = {"url": url, "format": "", "stage": "", "veto": [], "maps": []}
-        time.sleep(1)  # Delay to avoid rate limiting
-
-    # Update each entry in results_data with scraped data
-    for match in results_data:
-        url = match['url']
-        if url in scraped_data:
-            match.update({
-                "format": scraped_data[url]["format"],
-                "stage": scraped_data[url]["stage"],
-                "veto": scraped_data[url]["veto"],
-                "maps": scraped_data[url]["maps"]
-            })
-
-    # Save updated data to a new JSON file
-    output_file = "updated_results.json"
-    with open(output_file, 'w') as f:
-        json.dump(results_data, f, indent=2)
-    logging.info(f"Saved updated results to {output_file}")
 
 def main():
-    json_file_path = "results.json"  # Path to your JSON file
-    update_results_json(json_file_path)
+    url = "https://www.hltv.org/betting/money"
+
+    logging.info("Fetching HLTV betting odds page...")
+    html = get_html(url)
+
+    if not html:
+        logging.error("Failed to retrieve page")
+        return
+
+    logging.info("Parsing matches...")
+    results = parse_matches(html)
+
+    logging.info(f"Extracted {len(results)} matches with odds")
+
+    with open("hltv_odds.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=2)
+
+    # Print preview
+    for match in results:
+        print(f"{match['team1']} vs {match['team2']}")
+        for prov, sides in match["odds"].items():
+            t1 = sides.get("team1", "—")
+            t2 = sides.get("team2", "—")
+            print(f"  {prov:18}  team1: {t1:>5}   team2: {t2:>5}")
+        print(f"  → {match.get('match_url')}")
+        print("─" * 70)
+
 
 if __name__ == "__main__":
     main()
